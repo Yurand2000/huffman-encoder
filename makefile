@@ -11,3 +11,12 @@ run: all
 .PHONY: clean
 clean:
 	@rm -r -f build
+
+.PHONY: test
+test:
+	@mkdir build -p
+	@mkdir build/test -p
+
+	g++ -O3 -std=c++2a -o build/encoder_table_tests.out src/encoder/encoder_table.cpp src/encoder/encoder_table_tests.cpp
+	@echo ''
+	@./build/encoder_table_tests.out
