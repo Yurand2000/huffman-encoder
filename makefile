@@ -1,18 +1,29 @@
-.PHONY: all
-all:
-	@mkdir build -p
-	g++ -O3 -std=c++2a -o build/a.out src/main.cpp src/file_utils.cpp src/cmd_args.cpp src/encoder/encoder_table.cpp
+COMPILER=g++
+OPTIONS=-O3 -std=c++2a -pedantic -Werror
+COMPILE=$(COMPILER) $(OPTIONS)
+SRC=src
+BUILD=build
 
-.PHONY: run
+include ./src/Makefile
+
+#final path substitutions
+SRC_FILES := $(patsubst %,$(SRC)/%,$(SRC_FILES))
+OBJECTS = $(patsubst $(SRC)/%.cpp, $(BUILD)/%.o, $(SRC_FILES))
+
+all: $(BUILD)/program
+
+$(BUILD)/program : $(OBJECTS)
+	@mkdir build -p
+	$(COMPILE) -o $@ $^
+
+$(BUILD)/%.o : $(SRC)/%.cpp
+	@mkdir $(dir $@) -p
+	$(COMPILE) -c -o $@ $<
+
 run: all
 	@echo ''
-	@./build/a.out
+	@$(BUILD)/program
 
-.PHONY: clean
-clean:
-	@rm -r -f build
-
-.PHONY: test
 test:
 	@mkdir build -p
 	@mkdir build/test -p
@@ -20,3 +31,8 @@ test:
 	g++ -O3 -std=c++2a -o build/encoder_table_tests.out src/encoder/encoder_table.cpp src/encoder/encoder_table_tests.cpp
 	@echo ''
 	@./build/encoder_table_tests.out
+
+clean:
+	@rm -rf $(BUILD)
+
+.PHONY: all run test clean

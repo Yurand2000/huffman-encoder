@@ -3,20 +3,24 @@
 
 #include <string>
 #include <vector>
+#include <bitset>
+
+#include "../definitions.h"
 
 #define TABLE_SIZE 256
-
-typedef unsigned char byte;
 
 namespace huffman::encoder
 {
     struct encodedCharacter {
         byte bits;
-        std::vector<byte> code;
+        std::bitset<TABLE_SIZE> code;
 
         encodedCharacter();
 
         void append_bit(bool bit);
+        std::vector<bool> get() const;
+
+        std::string to_string() const;
     };
 
     class encoderTable {
@@ -27,12 +31,21 @@ namespace huffman::encoder
 
         public:
             encoderTable(const std::string& text);
-            encoderTable(const std::vector<byte>& encoded_table);
 
-            inline const encodedCharacter& get(char character) const;
-            inline encodedCharacter& get_mut(char character);
+            inline const encodedCharacter& get(char character) const {
+                return table[static_cast<byte>(character)];
+            }
+
+            inline encodedCharacter& get_mut(char character) {
+                return table[static_cast<byte>(character)];
+            }
+
+            inline const encodedCharacter (&get_table() const)[TABLE_SIZE] {
+                return table;
+            }
 
             std::vector<byte> serialize() const;
+            std::string to_string() const;
     };
 }
 
