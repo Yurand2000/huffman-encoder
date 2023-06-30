@@ -4,19 +4,11 @@
 #include <string>
 #include <vector>
 
-#include "decoder_tree.h"
+#include "../definitions.h"
 
 namespace huffman::decoder
 {
-    class decoder {
-    private:
-        decoderTree _decoder;
-
-    public:
-        decoder(const std::vector<byte>& encoded_table);
-
-        std::string decode(std::vector<bool> bit_stream) const;
-    };
+    std::string decode(const std::vector<byte>& encoded_text);
 }
 
 #endif

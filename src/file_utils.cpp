@@ -19,7 +19,7 @@ std::string read_text_file(const std::string& filename)
     return out;
 }
 
-std::vector<char> read_binary_file(const std::string& filename)
+std::vector<unsigned char> read_binary_file(const std::string& filename)
 {
     auto file = std::ifstream(filename, std::ios::binary);
     file.exceptions(std::ios_base::badbit);
@@ -32,12 +32,12 @@ std::vector<char> read_binary_file(const std::string& filename)
     std::ifstream::pos_type size = file.tellg();
 
     if (size == 0) {
-        return std::vector<char>{};
+        return std::vector<unsigned char>{};
     }
 
-    std::vector<char> result(size);
+    std::vector<unsigned char> result(size);
     file.seekg(0, std::ios::beg);
-    file.read(&result[0], size);
+    file.read(reinterpret_cast<char*>(result.data()), size);
 
     return result;
 }

@@ -12,14 +12,4 @@ inline T positive_div_ceil(T dividend, T divisor) {
     }
 }
 
-template<typename... Args>
-void assert_fn(bool expression, const char* filename, Args&&... args) {
-    if (!expression) {
-        std::cerr << "Test Error in file: " << filename << std::endl;
-        (std::cerr << ... << std::forward<Args>(args));
-        std::cerr << std::endl << std::flush;
-        std::abort();
-    }
-}
-
 #endif

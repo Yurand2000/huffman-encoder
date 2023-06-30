@@ -3,7 +3,7 @@
 
 #include "../definitions.h"
 
-#include "encoder_table.h"
+#include "encoded_character.h"
 
 namespace huffman::encoder
 {
@@ -13,6 +13,7 @@ namespace huffman::encoder
 
         serializableCharacter(char character, encodedCharacter encoding);
         serializableCharacter(std::vector<byte>::const_iterator& bytes);
+        serializableCharacter(std::vector<byte>::const_iterator&& bytes);
 
         std::vector<byte> serialize() const;
     };

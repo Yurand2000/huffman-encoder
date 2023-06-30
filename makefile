@@ -3,36 +3,51 @@ OPTIONS=-O3 -std=c++2a -pedantic -Werror
 COMPILE=$(COMPILER) $(OPTIONS)
 SRC=src
 BUILD=build
+BUILD_TESTS=$(BUILD)/tests
 
 include ./src/Makefile
 
 #final path substitutions
 SRC_FILES := $(patsubst %,$(SRC)/%,$(SRC_FILES))
 OBJECTS = $(patsubst $(SRC)/%.cpp, $(BUILD)/%.o, $(SRC_FILES))
+DEPENDS := $(patsubst %.o,%.d,$(OBJECTS))
 
+TEST_FILES := $(patsubst %,$(SRC)/%,$(TEST_FILES))
+TEST_OBJECTS = $(patsubst $(SRC)/%.cpp, $(BUILD)/%.o, $(TEST_FILES))
+TEST_PROGRAMS = $(patsubst $(SRC)/%.cpp, $(BUILD_TESTS)/%.out, $(TEST_FILES))
+
+#build main program
 all: $(BUILD)/program
 
-$(BUILD)/program : $(OBJECTS)
-	@mkdir build -p
+$(BUILD)/program : $(SRC)/main.cpp $(OBJECTS)
+	@mkdir $(dir $@) -p
 	$(COMPILE) -o $@ $^
+
+-include $(DEPENDS)
 
 $(BUILD)/%.o : $(SRC)/%.cpp
 	@mkdir $(dir $@) -p
-	$(COMPILE) -c -o $@ $<
+	$(COMPILE) -MMD -MP -DTEST_FILE_NAME="\"$(notdir $<)\"" -c $< -o $@
 
-run: all
+#build tests
+$(BUILD_TESTS)/%.out : $(BUILD)/%.o $(OBJECTS)
+	@mkdir $(dir $@) -p
+	$(COMPILE) -o $@ $^
+
+#execute tests
+define execute-test
+-@./$(1)
+
+endef
+
+test: $(TEST_OBJECTS) $(TEST_PROGRAMS)
 	@echo ''
-	@$(BUILD)/program
+	$(foreach test_program, $(TEST_PROGRAMS), $(call execute-test,$(test_program)))	
 
-test:
-	@mkdir build -p
-	@mkdir build/test -p
-
-	g++ -O3 -std=c++2a -o build/encoder_table_tests.out src/encoder/encoder_table.cpp src/encoder/encoder_table_tests.cpp
-	@echo ''
-	@./build/encoder_table_tests.out
-
+#clean
 clean:
 	@rm -rf $(BUILD)
 
-.PHONY: all run test clean
+clear: clean
+
+.PHONY: all test clean clear

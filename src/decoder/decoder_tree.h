@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 
+#include "../bit_stream.h"
 #include "../definitions.h"
 
 namespace huffman::decoder
@@ -24,9 +25,10 @@ namespace huffman::decoder
         decoderNode root;
 
     public:
-        decoderTree(const std::vector<byte>& encoded_table);
+        decoderTree(std::vector<byte>::const_iterator& encoded_table);
+        decoderTree(std::vector<byte>::const_iterator&& encoded_table);
 
-        char decode(std::vector<bool>::const_iterator& bit_stream) const;
+        char decode(bitStream& bit_stream) const;
     };
 }
 

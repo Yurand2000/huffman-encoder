@@ -4,9 +4,11 @@
 #include <vector>
 #include <string>
 
+#include "../definitions.h"
+
 namespace huffman::encoder
 {
-    std::vector<bool> encode(std::string text);
+    std::vector<byte> encode(std::string text);
 }
 
 #endif

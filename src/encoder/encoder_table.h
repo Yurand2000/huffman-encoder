@@ -3,26 +3,12 @@
 
 #include <string>
 #include <vector>
-#include <bitset>
 
 #include "../definitions.h"
-
-#define TABLE_SIZE 256
+#include "encoded_character.h"
 
 namespace huffman::encoder
 {
-    struct encodedCharacter {
-        byte bits;
-        std::bitset<TABLE_SIZE> code;
-
-        encodedCharacter();
-
-        void append_bit(bool bit);
-        std::vector<bool> get() const;
-
-        std::string to_string() const;
-    };
-
     class encoderTable {
         private:
             encodedCharacter table[TABLE_SIZE];

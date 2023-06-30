@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <unordered_map>
 #include <memory>
-#include <bitset>
 
 #include "serializable_character.h"
 #include "../utils.h"
@@ -31,7 +30,7 @@ namespace huffman::encoder::detail
     }
 
     bool heap_compare(const std::unique_ptr<encoderTree>& lhs, const std::unique_ptr<encoderTree>& rhs) {
-        return lhs->frequency > rhs->frequency;
+        return lhs->frequency > rhs->frequency || (lhs->frequency == rhs->frequency && lhs->character < rhs->character);
     }
 
     std::unique_ptr<encoderTree> build_encoder_tree(const std::unordered_map<char, int>& frequencies) {
@@ -99,35 +98,6 @@ namespace huffman::encoder::detail
 
 namespace huffman::encoder
 {
-    encodedCharacter::encodedCharacter() : bits(0), code(0) {}
-
-    void encodedCharacter::append_bit(bool bit) {
-        bits += 1;
-        code <<= 1;
-        code.set(0, bit);
-    }
-
-    std::vector<bool> encodedCharacter::get() const {
-        if (bits == 0) return {};
-
-        auto vector = std::vector<bool>();
-        vector.reserve(bits);
-        for (size_t i = bits; i > 0; i--) {
-            vector.push_back( code[i-1] );
-        }
-
-        return vector;
-    }
-
-    std::string encodedCharacter::to_string() const {
-        auto string = std::string();
-        for (size_t i = bits; i > 0; i--) {
-            string.push_back(code[i-1] ? '1' : '0');
-        }
-
-        return string;
-    }
-
     encoderTable::encoderTable() {
         for (size_t i = 0; i < TABLE_SIZE; i++) {
             table[i] = encodedCharacter();
@@ -145,6 +115,7 @@ namespace huffman::encoder
     std::vector<byte> encoderTable::serialize() const {
         auto serialized = std::vector<byte>();
 
+        byte character_count = 0;
         for (size_t i = 0; i < TABLE_SIZE; i++) {
             if (get(i).bits > 0) {
                 auto serialized_character = serializableCharacter(i, get(i)).serialize();
@@ -153,9 +124,12 @@ namespace huffman::encoder
                     std::begin(serialized_character),
                     std::end(serialized_character)
                 );
+
+                character_count++;
             }
         }
 
+        serialized.insert(serialized.begin(), character_count);
         return serialized;
     }
 

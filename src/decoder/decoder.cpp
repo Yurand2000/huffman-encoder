@@ -1,23 +1,36 @@
 #include "decoder.h"
 
-#include <algorithm>
-#include <unordered_map>
-#include <memory>
-#include <bitset>
+#include <iostream>
 
+#include "decoder_tree.h"
 #include "../utils.h"
 
 namespace huffman::decoder
 {
-    decoder::decoder(const std::vector<byte>& encoded_table)
-        : _decoder(encoded_table) {}
+    std::string decode(const std::vector<byte>& encoded_text)
+    {
+        auto iter = encoded_text.cbegin();
 
-    std::string decoder::decode(std::vector<bool> bit_stream) const {
-        auto iter = bit_stream.cbegin();
-        
+        //decode encodings
+        auto decoder = decoderTree(iter);
+
+        //get the number of characters
+        size_t number_of_characters = 0;
+        auto size_bytes = reinterpret_cast<byte*>(&number_of_characters);
+        for(size_t i = 0; i < sizeof(size_t); i++) {
+            size_bytes[i] = *iter; iter++;
+        }
+
+        //decode characters
+        auto offset = std::distance(encoded_text.cbegin(), iter);
+
+        auto bit_stream = bitStream(encoded_text);
+        bit_stream.advance(offset * 8);
+
         auto string = std::string();
-        while(iter != bit_stream.cend()) {
-            string += _decoder.decode(iter);
+        for(size_t i = 0; i < number_of_characters && bit_stream.hasNext(); i++) {
+            auto character = decoder.decode(bit_stream);
+            string += character;
         }
 
         return string;
