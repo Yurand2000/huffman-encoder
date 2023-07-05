@@ -6,6 +6,7 @@
 #endif
 
 #include <iostream>
+#include <exception>
 
 template<typename... Args>
 void assert(bool expression, Args&&... args) {
@@ -17,12 +18,22 @@ void assert(bool expression, Args&&... args) {
     }
 }
 
+void print_exception_and_abort(const std::exception& e) {
+    std::cout << "Termination with exception: " << e.what() << std::endl << std::flush;
+    std::cout << TEST_FILE_NAME << " - Failed" << std::endl;
+    std::abort();
+}
+
 void testMain();
 int main()
 {
     std::cout << TEST_FILE_NAME << " - Start" << std::endl;
 
-    testMain();
+    try {
+        testMain();
+    } catch (const std::exception& e) {
+        print_exception_and_abort(e);
+    }
 
     std::cout << TEST_FILE_NAME << " - Pass" << std::endl;
 }

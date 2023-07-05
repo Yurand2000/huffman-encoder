@@ -15,6 +15,7 @@ DEPENDS := $(patsubst %.o,%.d,$(OBJECTS))
 TEST_FILES := $(patsubst %,$(SRC)/%,$(TEST_FILES))
 TEST_OBJECTS = $(patsubst $(SRC)/%.cpp, $(BUILD)/%.o, $(TEST_FILES))
 TEST_PROGRAMS = $(patsubst $(SRC)/%.cpp, $(BUILD_TESTS)/%.out, $(TEST_FILES))
+TEST_DEPENDS := $(patsubst %.o,%.d,$(TEST_OBJECTS))
 
 #build main program
 all: $(BUILD)/program
@@ -24,6 +25,7 @@ $(BUILD)/program : $(SRC)/main.cpp $(OBJECTS)
 	$(COMPILE) -o $@ $^
 
 -include $(DEPENDS)
+-include $(TEST_DEPENDS)
 
 $(BUILD)/%.o : $(SRC)/%.cpp
 	@mkdir $(dir $@) -p

@@ -14,7 +14,7 @@ namespace huffman::decoder::detail
 
     std::unique_ptr<decoderNode> buildDecoderTree(std::vector<serializableCharacter> characters, int depth) {
         if (characters.size() == 0)
-            throw new std::runtime_error("Given character codes are not prefix free codes");
+            throw std::runtime_error("Given character codes, at depth " + std::to_string(depth) + " are not prefix free codes [0]");
         else if (characters.size() == 1)
             return std::unique_ptr<decoderNode>( new decoderNode(characters[0].character) );
         else {
@@ -22,8 +22,8 @@ namespace huffman::decoder::detail
             auto falseCharacters = std::vector<serializableCharacter>();
             for (auto character : characters) {
                 if (character.encoding.bits < depth) {
-                    throw new std::runtime_error("Given character codes are not prefix free codes");
-                } else if (character.encoding.code[character.encoding.bits - depth - 1] == true) {
+                    throw std::runtime_error("Given character codes, at depth " + std::to_string(depth) + " are not prefix free codes [1]");
+                } else if (character.encoding.get_bit(depth + 1)) {
                     trueCharacters.push_back(character);
                 } else {
                     falseCharacters.push_back(character);

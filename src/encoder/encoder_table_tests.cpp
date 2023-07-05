@@ -20,13 +20,10 @@ void generateEncoderTable()
             if (i == j) continue;
 
             auto& other = table[j];
-            if (current.bits <= other.bits) {
-                auto suffix_bits = other.bits - current.bits;
-                auto other_prefix = other.code >> suffix_bits;
-                assert(current.code != other_prefix,
-                    "Code of character \'", std::string(1, static_cast<char>(i)), "\' : ", current.to_string(),
-                    " is a prefix of character \'", std::string(1, static_cast<char>(j)), "\' : ", other.to_string());
-            }
+            if (other.bits == 0) continue;
+            assert(!current.is_prefix(other),
+                "Code of character \'", std::string(1, static_cast<char>(i)), "\' : ", current.to_string(),
+                " is a prefix of character \'", std::string(1, static_cast<char>(j)), "\' : ", other.to_string());
         }
     }
 }

@@ -5,7 +5,29 @@
 
 namespace huffman::encoder::detail
 {
-
+    const static byte rightByteMasks[] = {
+        0,
+        0b00000001,
+        0b00000011,
+        0b00000111,
+        0b00001111,
+        0b00011111,
+        0b00111111,
+        0b01111111,
+        0b11111111
+    };
+    
+    const static byte leftByteMasks[] = {
+        0,
+        0b10000000,
+        0b11000000,
+        0b11100000,
+        0b11110000,
+        0b11111000,
+        0b11111100,
+        0b11111110,
+        0b11111111,
+    };
 }
 
 namespace huffman::encoder
@@ -13,19 +35,8 @@ namespace huffman::encoder
     std::vector<byte> encode(std::string text) {
         auto table = encoderTable(text);
 
+        //serialize the table in the output array
         auto out_data = table.serialize();
-
-        auto bits = std::vector<bool>();
-        for (char character : text) {
-            auto encoding = table.get(static_cast<byte>(character));
-
-            for(size_t i = encoding.bits; i > 0; i--) {
-                bits.push_back(encoding.code[i-1]);
-            }
-        }
-
-        auto number_of_bytes = positive_div_ceil(bits.size(), static_cast<size_t>(8));
-        out_data.reserve(out_data.size() + sizeof(size_t) + number_of_bytes);
 
         //insert the number of characters
         auto number_of_characters = text.size();
@@ -35,13 +46,30 @@ namespace huffman::encoder
         }
 
         //encode text
-        for (size_t i = 0; i < number_of_bytes; i++ ) {
-            byte current_byte = 0;
-            for(size_t j = 0; j < 8 && (i*8+j) < bits.size(); j++) {
-                current_byte |= bits[i*8 + j] << (7 - j);
+        size_t last_bit = 0;
+        for (char character : text) {
+            auto& encoding = table.get(static_cast<byte>(character));
+
+            for(size_t i = 0; i < encoding.bytes() - 1; i++) {
+                if (last_bit == 0) {
+                    out_data.push_back( encoding.code[i] );
+                } else {
+                    out_data.back() |= ( (encoding.code[i] & detail::leftByteMasks[8 - last_bit]) >> last_bit );
+                    out_data.push_back( (encoding.code[i] & detail::rightByteMasks[last_bit]) << (8 - last_bit) );
+                }
             }
 
-            out_data.push_back(current_byte);
+            if (last_bit == 0) {
+                out_data.push_back(encoding.code[encoding.bytes() - 1]);
+            } else {
+                out_data.back() |= ( (encoding.code[encoding.bytes() - 1] & detail::leftByteMasks[8 - last_bit]) >> last_bit );
+
+                if (last_bit + encoding.last_byte_bits() > 8) {
+                    out_data.push_back( (encoding.code[encoding.bytes() - 1] & detail::rightByteMasks[last_bit]) << (8 - last_bit) );
+                }
+            }
+
+            last_bit = (last_bit + encoding.last_byte_bits()) % 8;
         }
 
         return out_data;

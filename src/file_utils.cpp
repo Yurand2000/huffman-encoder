@@ -7,7 +7,7 @@ std::string read_text_file(const std::string& filename)
     file.exceptions(std::ios_base::badbit);
 
     if (!file.is_open()) {
-        throw new std::runtime_error("File \"" + filename + "\" does not exist.");
+        throw std::runtime_error("File \"" + filename + "\" does not exist.");
     }
 
     auto out = std::string();
@@ -25,7 +25,7 @@ std::vector<unsigned char> read_binary_file(const std::string& filename)
     file.exceptions(std::ios_base::badbit);
 
     if (!file.is_open()) {
-        throw new std::runtime_error("File \"" + filename + "\" does not exist.");
+        throw std::runtime_error("File \"" + filename + "\" does not exist.");
     }
 
     file.seekg(0, std::ios::end);

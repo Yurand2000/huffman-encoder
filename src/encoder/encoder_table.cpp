@@ -140,11 +140,7 @@ namespace huffman::encoder
         for (size_t i = 0; i < TABLE_SIZE; i++) {
             auto& elem = get(i);
             if (elem.bits > 0) {
-                out_string += "  " + std::string(1, static_cast<char>(i)) + " : ";
-                for (auto bit : elem.get()) {
-                    out_string += bit ? "1" : "0";
-                }
-                out_string += "\n";
+                out_string += "  " + std::string(1, static_cast<char>(i)) + " : " + elem.to_string() + "\n";
             }
         }
 
