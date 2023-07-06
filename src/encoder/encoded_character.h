@@ -34,6 +34,10 @@ namespace huffman::encoder
 
         bool is_prefix(const encodedCharacter& other) const;
 
+        inline byte operator[](size_t pos) const {
+            return code[pos];
+        }
+
         friend bool operator==(const encodedCharacter& lhs, const encodedCharacter& rhs);
     };
 }

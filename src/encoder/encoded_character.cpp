@@ -2,33 +2,6 @@
 
 #include "../utils.h"
 
-namespace huffman::encoder::detail
-{
-    const static byte rightByteMasks[] = {
-        0,
-        0b00000001,
-        0b00000011,
-        0b00000111,
-        0b00001111,
-        0b00011111,
-        0b00111111,
-        0b01111111,
-        0b11111111
-    };
-    
-    const static byte leftByteMasks[] = {
-        0,
-        0b10000000,
-        0b11000000,
-        0b11100000,
-        0b11110000,
-        0b11111000,
-        0b11111100,
-        0b11111110,
-        0b11111111,
-    };
-}
-
 namespace huffman::encoder
 {
     encodedCharacter::encodedCharacter() : bits(0) {
@@ -50,7 +23,7 @@ namespace huffman::encoder
             curr_byte = *(++serialized);
         }
 
-        code[ bytes() - 1 ] = curr_byte & detail::leftByteMasks[last_byte_bits()];
+        code[ bytes() - 1 ] = curr_byte & leftByteMasks[last_byte_bits()];
         curr_byte = *(++serialized);
 
         #pragma GCC diagnostic pop
@@ -65,7 +38,7 @@ namespace huffman::encoder
     }
     
     bool encodedCharacter::get_bit(byte bit) const {
-        return (code[positive_div_ceil<byte>(bit, 8) - 1] & (detail::leftByteMasks[1] >> (bit - 1) % 8)) > 0;
+        return (code[positive_div_ceil<byte>(bit, 8) - 1] & (leftByteMasks[1] >> (bit - 1) % 8)) > 0;
     }
 
     std::string encodedCharacter::to_string() const {
@@ -112,7 +85,7 @@ namespace huffman::encoder
                     return false;
             }
 
-            auto last_byte_mask = detail::leftByteMasks[last_byte_bits()];
+            auto last_byte_mask = leftByteMasks[last_byte_bits()];
             return (code[bytes() - 1] & last_byte_mask) == (other.code[bytes() - 1] & last_byte_mask);
         }
     }

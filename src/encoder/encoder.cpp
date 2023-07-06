@@ -5,29 +5,48 @@
 
 namespace huffman::encoder::detail
 {
-    const static byte rightByteMasks[] = {
-        0,
-        0b00000001,
-        0b00000011,
-        0b00000111,
-        0b00001111,
-        0b00011111,
-        0b00111111,
-        0b01111111,
-        0b11111111
+    using namespace huffman::encoder;
+
+    struct characterSerializer {
+    private:
+        const encoderTable& table;
+        std::vector<byte>& data;
+        byte last_bit;
+
+    public:
+        characterSerializer(const encoderTable& table, std::vector<byte>& data);
+
+        inline void append(char character);
     };
-    
-    const static byte leftByteMasks[] = {
-        0,
-        0b10000000,
-        0b11000000,
-        0b11100000,
-        0b11110000,
-        0b11111000,
-        0b11111100,
-        0b11111110,
-        0b11111111,
-    };
+
+    characterSerializer::characterSerializer(const encoderTable& table, std::vector<byte>& data)
+        : table(table), data(data), last_bit(8) {}
+
+    void characterSerializer::append(char character) {
+        auto& encoding = table.get(character);
+
+        if (last_bit == 8) {
+            //just append the character encoding, because it is right aligned.
+            for(size_t i = 0; i < encoding.bytes(); i++)
+                data.push_back( encoding[i] );
+        } else {
+            //serialize first n-1 bytes
+            for(size_t i = 0; i < encoding.bytes() - 1; i++) {
+                data.back() |= ( (encoding[i] & leftByteMasks[8 - last_bit]) >> last_bit );
+                data.push_back( (encoding[i] & rightByteMasks[last_bit]) << (8 - last_bit) );
+            }
+
+            //serialize last byte
+            data.back() |= ( (encoding[encoding.bytes() - 1] & leftByteMasks[8 - last_bit]) >> last_bit );
+
+            if (last_bit + encoding.last_byte_bits() > 8) {
+                data.push_back( (encoding[encoding.bytes() - 1] & rightByteMasks[last_bit]) << (8 - last_bit) );
+            }
+        }
+
+        last_bit = (last_bit + encoding.last_byte_bits()) % 8;
+        if (last_bit == 0) last_bit = 8;
+    }
 }
 
 namespace huffman::encoder
@@ -46,31 +65,9 @@ namespace huffman::encoder
         }
 
         //encode text
-        size_t last_bit = 0;
-        for (char character : text) {
-            auto& encoding = table.get(static_cast<byte>(character));
-
-            for(size_t i = 0; i < encoding.bytes() - 1; i++) {
-                if (last_bit == 0) {
-                    out_data.push_back( encoding.code[i] );
-                } else {
-                    out_data.back() |= ( (encoding.code[i] & detail::leftByteMasks[8 - last_bit]) >> last_bit );
-                    out_data.push_back( (encoding.code[i] & detail::rightByteMasks[last_bit]) << (8 - last_bit) );
-                }
-            }
-
-            if (last_bit == 0) {
-                out_data.push_back(encoding.code[encoding.bytes() - 1]);
-            } else {
-                out_data.back() |= ( (encoding.code[encoding.bytes() - 1] & detail::leftByteMasks[8 - last_bit]) >> last_bit );
-
-                if (last_bit + encoding.last_byte_bits() > 8) {
-                    out_data.push_back( (encoding.code[encoding.bytes() - 1] & detail::rightByteMasks[last_bit]) << (8 - last_bit) );
-                }
-            }
-
-            last_bit = (last_bit + encoding.last_byte_bits()) % 8;
-        }
+        auto serializer = detail::characterSerializer(table, out_data);
+        for (char character : text)
+            serializer.append(character);
 
         return out_data;
     }
