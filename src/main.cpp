@@ -24,19 +24,32 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (options.encode) {
-        auto text = read_text_file(options.input_file);
-        auto encoded_text = encoder::encode(text);
-        
-        auto file = std::ofstream(options.output_file);
-        file.write(reinterpret_cast<char*>(encoded_text.data()), encoded_text.size());
-        file.flush();
-    } else {
+    if (options.encode == programMode::decode) {
         auto encoded_text = read_binary_file(options.input_file);
         auto text = decoder::decode(encoded_text);
 
         auto file = std::ofstream(options.output_file);
-        file << text << std::flush;
+        file << text << std::flush;        
+    } else {
+        auto text = read_text_file(options.input_file);
+
+        std::vector<unsigned char> encoded_text;
+        switch (options.encode) {
+            default:
+            case programMode::encode:
+                encoded_text = encoder::encode(text);
+                break;
+            case programMode::encodeParallelNative:
+                encoded_text = encoder::encode_parallel_native(text, options.number_of_workers);
+                break;
+            case programMode::encodeParallelFastFlow:
+                encoded_text = encoder::encode_parallel_ff(text, options.number_of_workers);
+                break;
+        }
+        
+        auto file = std::ofstream(options.output_file);
+        file.write(reinterpret_cast<char*>(encoded_text.data()), encoded_text.size());
+        file.flush();
     }
 
     return 0;

@@ -71,4 +71,12 @@ namespace huffman::encoder
 
         return out_data;
     }
+
+    std::vector<byte> encode_parallel_native(std::string text, size_t workers) {
+        return std::vector<byte>();
+    }
+
+    std::vector<byte> encode_parallel_ff(std::string text, size_t workers) {
+        return std::vector<byte>();
+    }
 }

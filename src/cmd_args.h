@@ -4,8 +4,16 @@
 #include <optional>
 #include <string>
 
+enum programMode {
+    encode,
+    decode,
+    encodeParallelNative,
+    encodeParallelFastFlow
+};
+
 struct programOptions {
-    bool encode;
+    programMode encode;
+    size_t number_of_workers;
     std::string input_file;
     std::string output_file;
     bool overwrite_output;
