@@ -15,20 +15,6 @@ namespace huffman::encoder::detail
         std::unique_ptr<encoderTree> left, right;
     };
 
-    std::unordered_map<char, int> extract_frequencies(const std::string& text) {
-        auto frequencies = std::unordered_map<char, int>();
-
-        for (auto character: text) {
-            if (frequencies.find(character) != frequencies.end()) {
-                frequencies[character] += 1;
-            } else {
-                frequencies.emplace(character, 1);
-            }
-        }
-
-        return frequencies;
-    }
-
     bool heap_compare(const std::unique_ptr<encoderTree>& lhs, const std::unique_ptr<encoderTree>& rhs) {
         return lhs->frequency > rhs->frequency || (lhs->frequency == rhs->frequency && lhs->character < rhs->character);
     }
@@ -104,9 +90,8 @@ namespace huffman::encoder
         }
     }
 
-    encoderTable::encoderTable(const std::string& text)
+    encoderTable::encoderTable(const std::unordered_map<char, int>& frequencies)
     {
-        auto frequencies = detail::extract_frequencies(text);
         auto tree = detail::build_encoder_tree(frequencies);
         detail::build_encoder_table(*this, tree);
     }

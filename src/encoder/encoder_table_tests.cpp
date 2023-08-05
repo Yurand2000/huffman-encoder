@@ -8,8 +8,12 @@ using namespace huffman::encoder;
 
 void generateEncoderTable()
 {
-    auto input = "this is an example of a huffman tree";
-    auto& table = encoderTable(input).get_table();
+    //frequencies for the string: this is an example of a huffman tree
+    auto frequencies = std::unordered_map<char, int>{
+        {' ', 7}, {'a', 4}, {'e', 4}, {'f', 3}, {'h', 2}, {'i', 2}, {'m', 2}, {'n', 2},
+        {'s', 2}, {'t', 2}, {'l', 1}, {'o', 1}, {'p', 1}, {'r', 1}, {'u', 1}, {'x', 1},
+    };
+    auto& table = encoderTable(frequencies).get_table();
 
     //verify that the generated codes are prefix-free codes
     for (size_t i = 0; i < TABLE_SIZE; i++) {
@@ -30,8 +34,12 @@ void generateEncoderTable()
 
 void testSerialization()
 {
-    auto input = "this is an example of a huffman tree";
-    auto table = encoderTable(input);
+    //frequencies for the string: this is an example of a huffman tree
+    auto frequencies = std::unordered_map<char, int>{
+        {' ', 7}, {'a', 4}, {'e', 4}, {'f', 3}, {'h', 2}, {'i', 2}, {'m', 2}, {'n', 2},
+        {'s', 2}, {'t', 2}, {'l', 1}, {'o', 1}, {'p', 1}, {'r', 1}, {'u', 1}, {'x', 1},
+    };
+    auto table = encoderTable(frequencies);
 
     auto serialized = table.serialize();
 

@@ -12,11 +12,11 @@ void testSpawnAndTerminateThread() {
 void testOneTask() {
     auto thread_initialization = spawnThread();
 
-    auto task = std::packaged_task<int()>([]() { return 5; });
-    auto first_task_submit = submitTask(std::move(thread_initialization), std::move(task));
+    std::function<int()> task = []() { return 5; };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task);
 
     int result = 0;
-    auto first_task_result = threadTask::getResult(std::move(first_task_submit), result);
+    auto first_task_result = getResult(std::move(first_task_submit), result);
 
     assert(result == 5, "Expected result to be 5, but found: ", result);
 }
@@ -24,19 +24,19 @@ void testOneTask() {
 void testTwoTasks() {
     auto thread_initialization = spawnThread();
 
-    auto task0 = std::packaged_task<int()>([]() { return 5; });
-    auto first_task_submit = submitTask(std::move(thread_initialization), std::move(task0));
+    std::function<int()> task0 = []() { return 5; };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task0);
 
     int result0 = 0;
-    auto first_task_result = threadTask::getResult(std::move(first_task_submit), result0);
+    auto first_task_result = getResult(std::move(first_task_submit), result0);
 
     assert(result0 == 5, "Expected result to be 5, but found: ", result0);
 
-    auto task1 = std::packaged_task<float()>([]() { return 10.5f; });
-    auto second_task_submit = submitTask(std::move(first_task_result), std::move(task1));
+    std::function<float()>  task1 = []() { return 10.5f; };
+    auto second_task_submit = submitTask(std::move(first_task_result), task1);
 
     float result1 = 0.0f;
-    auto second_task_result = threadTask::getResult(std::move(second_task_submit), result1);
+    auto second_task_result = getResult(std::move(second_task_submit), result1);
 
     assert(result1 == 10.5f, "Expected result to be 10.5f, but found: ", result1);
 }
@@ -44,18 +44,18 @@ void testTwoTasks() {
 void testTaskNotRetrieved() {
     auto thread_initialization = spawnThread();
 
-    auto task0 = std::packaged_task<int()>([]() { return 5; });
-    auto first_task_submit = submitTask(std::move(thread_initialization), std::move(task0));
+    std::function<int()> task0 = []() { return 5; };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task0);
 }
 
 void testManualTermination() {
     auto thread_initialization = spawnThread();
 
-    auto task = std::packaged_task<int()>([]() { return 5; });
-    auto first_task_submit = submitTask(std::move(thread_initialization), std::move(task));
+    std::function<int()> task = []() { return 5; };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task);
 
     int result = 0;
-    auto first_task_result = threadTask::getResult(std::move(first_task_submit), result);
+    auto first_task_result = getResult(std::move(first_task_submit), result);
 
     assert(result == 5, "Expected result to be 5, but found: ", result);
 
@@ -65,10 +65,23 @@ void testManualTermination() {
 void testManualTermination2() {
     auto thread_initialization = spawnThread();
 
-    auto task0 = std::packaged_task<int()>([]() { return 5; });
-    auto first_task_submit = submitTask(std::move(thread_initialization), std::move(task0));
+    std::function<int()> task0 = []() { return 5; };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task0);
 
     closeThread(std::move(first_task_submit));
+}
+
+void testExecutedNotInMainThread() {
+    auto thread_initialization = spawnThread();
+
+    std::function<std::thread::id()>  task = []() { return std::this_thread::get_id(); };
+    auto first_task_submit = submitTask(std::move(thread_initialization), task);
+
+    auto main_thread = std::this_thread::get_id();
+    auto current_thread = std::this_thread::get_id();
+    auto first_task_result = getResult(std::move(first_task_submit), current_thread);
+
+    assert(main_thread != current_thread, "Code has not been run in a non-main thread.");
 }
 
 void testMain()
@@ -79,4 +92,5 @@ void testMain()
     testTaskNotRetrieved();
     testManualTermination();
     testManualTermination2();
+    testExecutedNotInMainThread();
 }

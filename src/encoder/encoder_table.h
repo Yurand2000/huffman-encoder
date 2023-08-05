@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include "../definitions.h"
 #include "encoded_character.h"
@@ -16,7 +17,7 @@ namespace huffman::encoder
             encoderTable();
 
         public:
-            encoderTable(const std::string& text);
+            encoderTable(const std::unordered_map<char, int>& frequencies);
 
             inline const encodedCharacter& get(char character) const {
                 return table[static_cast<byte>(character)];

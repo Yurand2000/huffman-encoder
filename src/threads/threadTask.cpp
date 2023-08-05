@@ -20,15 +20,17 @@ namespace huffman::parallel::native::detail
 
 namespace huffman::parallel::native
 {
-    threadTask::threadTask() {
-        task_promise = std::make_unique< std::promise<std::function<void()>> >();
-        thread = std::thread(detail::workerThreadFunction, task_promise.get());
-    }
-
     threadTask::~threadTask() {
         if (task_promise)
             task_promise->set_value(std::function<void()>());
         if (thread.joinable())
             thread.join();
+    }
+
+    threadTask spawnThread() {
+        auto thread = threadTask();
+        thread.task_promise = std::make_unique< std::promise<std::function<void()>> >();
+        thread.thread = std::thread(detail::workerThreadFunction, thread.task_promise.get());
+        return thread;
     }
 }
