@@ -1,5 +1,5 @@
 COMPILER=g++
-OPTIONS=-O3 -std=c++2a -pedantic -Werror
+OPTIONS=-O3 -std=c++2a -pedantic -Werror -pthread
 COMPILE=$(COMPILER) $(OPTIONS)
 SRC=src
 BUILD=build
