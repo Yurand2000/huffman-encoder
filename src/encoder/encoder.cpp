@@ -1,6 +1,7 @@
 #include "encoder.h"
 
 #include "encoder_table.h"
+#include "character_serializer.h"
 #include "../utils.h"
 
 #include "../threads/threadTask.h"
@@ -8,52 +9,6 @@
 namespace huffman::encoder::detail
 {
     using namespace huffman::encoder;
-
-    struct characterSerializer {
-    private:
-        const encoderTable& table;
-        std::vector<byte>& data;
-        byte last_bit;
-
-    public:
-        characterSerializer(const encoderTable& table, std::vector<byte>& data, byte offset = 8);
-
-        inline void append(char character);
-    };
-
-    characterSerializer::characterSerializer(const encoderTable& table, std::vector<byte>& data, byte offset)
-        : table(table), data(data)
-    {
-        if (offset == 0 || offset > 8) offset = 8;
-        if (offset != 8) data.push_back(0);
-        last_bit = offset;
-    }
-
-    void characterSerializer::append(char character) {
-        auto& encoding = table.get(character);
-
-        if (last_bit == 8) {
-            //just append the character encoding, because it is right aligned.
-            for(size_t i = 0; i < encoding.bytes(); i++)
-                data.push_back( encoding[i] );
-        } else {
-            //serialize first n-1 bytes
-            for(size_t i = 0; i < encoding.bytes() - 1; i++) {
-                data.back() |= ( (encoding[i] & leftByteMasks[8 - last_bit]) >> last_bit );
-                data.push_back( (encoding[i] & rightByteMasks[last_bit]) << (8 - last_bit) );
-            }
-
-            //serialize last byte
-            data.back() |= ( (encoding[encoding.bytes() - 1] & leftByteMasks[8 - last_bit]) >> last_bit );
-
-            if (last_bit + encoding.last_byte_bits() > 8) {
-                data.push_back( (encoding[encoding.bytes() - 1] & rightByteMasks[last_bit]) << (8 - last_bit) );
-            }
-        }
-
-        last_bit = (last_bit + encoding.last_byte_bits()) % 8;
-        if (last_bit == 0) last_bit = 8;
-    }
 
     std::unordered_map<char, int> extract_frequencies(std::string::const_iterator text_start, std::string::const_iterator text_end) {
         auto frequencies = std::unordered_map<char, int>();
@@ -77,6 +32,22 @@ namespace huffman::encoder::detail
 
         return bits;
     }
+
+    std::vector<byte> encode_text(
+        const encoderTable& table,
+        std::string::const_iterator text_start,
+        std::string::const_iterator text_end,
+        byte offset
+    ) {
+        std::vector<byte> out_data;
+        auto serializer = detail::characterSerializer(table, out_data, offset);
+
+        for (auto iter = text_start; iter != text_end; iter++) {
+            serializer.append(*iter);
+        }
+
+        return out_data;
+    };
 }
 
 namespace huffman::encoder
@@ -163,14 +134,7 @@ namespace huffman::encoder
             std::string::const_iterator text_end,
             byte offset
         ) {
-            std::vector<byte> out_data;
-            auto serializer = detail::characterSerializer(table, out_data, offset);
-
-            for (auto iter = text_start; iter != text_end; iter++) {
-                serializer.append(*iter);
-            }
-
-            return out_data;
+            return detail::encode_text(table, text_start, text_end, offset);
         });
 
         std::vector<byte> offsets(workers);
@@ -203,9 +167,5 @@ namespace huffman::encoder
         }
 
         return out_data;
-    }
-
-    std::vector<byte> encode_parallel_ff(std::string text, size_t workers) {
-        return std::vector<byte>();
     }
 }
