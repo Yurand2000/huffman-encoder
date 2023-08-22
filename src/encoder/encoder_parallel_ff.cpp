@@ -18,6 +18,17 @@ namespace huffman::encoder::detail
 
     std::vector<byte> encode_text(const encoderTable&, std::string::const_iterator, std::string::const_iterator, byte);
 
+    //parallel function definitions
+    void append_text_parallel(std::vector<byte>&, std::vector<byte>&, byte);
+    
+    size_t compute_segment_size(std::string const&, size_t);
+
+    std::pair<std::string::const_iterator, std::string::const_iterator> extract_task_range(std::string const&, size_t, size_t, size_t);
+
+    void combine_frequencies(std::unordered_map<char, int>&, std::unordered_map<char, int> const&);
+
+    void compute_serialization_offsets(encoderTable const&, std::vector<std::unordered_map<char, int>> const&, std::vector<byte>&, size_t);
+
     //frequencies extraction farm
     struct frequency_data {
         std::string::const_iterator text_start;
@@ -41,11 +52,10 @@ namespace huffman::encoder::detail
             : text(text), workers(workers) {}
 
         frequency_data* svc(void**) override {
-            auto segment_size = positive_div_ceil(text.length(), workers);
+            auto segment_size = compute_segment_size(text, workers);
             for(size_t i = 0; i < workers; i++) {
-                auto begin = text.cbegin() + segment_size * i;
-                auto end = (i == workers - 1) ? text.cend() : begin + segment_size;
-                ff_send_out_to(new frequency_data(begin, end, i), i);
+                auto pair = extract_task_range(text, segment_size, workers, i);
+                ff_send_out_to(new frequency_data(pair.first, pair.second, i), i);
             }
             return EOS;
         }
@@ -77,12 +87,7 @@ namespace huffman::encoder::detail
             auto& new_frequencies = output->frequencies;
             auto index = output->worker;
 
-            for(auto pair : new_frequencies) {
-                if (total_frequencies.find(pair.first) != total_frequencies.end())
-                    total_frequencies[pair.first] += pair.second;
-                else
-                    total_frequencies.emplace(pair.first, pair.second);
-            }
+            combine_frequencies(total_frequencies, new_frequencies);
             frequencies[index] = new_frequencies;
 
             delete output;
@@ -135,20 +140,14 @@ namespace huffman::encoder::detail
             : text(text), table(table), offsets(offsets), frequencies(frequencies), workers(workers) {}
 
         encoder_data* svc(void**) override {
-            auto segment_size = positive_div_ceil(text.length(), workers);
-                for(size_t i = 0; i < workers; i++) {
-                auto begin = text.cbegin() + segment_size * i;
-                auto end = (i == workers - 1) ? text.cend() : begin + segment_size;
+            compute_serialization_offsets(table, frequencies, offsets, workers);
 
-                if (i == 0) {
-                    offsets[i] = 0;
-                } else {
-                    auto previous_bits = detail::count_bits(table, frequencies[i - 1]);
-                    auto previous_offset = offsets[i - 1];
-                    offsets[i] = ((previous_bits + previous_offset) % 8);
-                }
-                ff_send_out_to(new encoder_data(begin, end, i, offsets[i]), i);
+            auto segment_size = compute_segment_size(text, workers);
+            for(size_t i = 0; i < workers; i++) {
+                auto pair = extract_task_range(text, segment_size, workers, i);
+                ff_send_out_to(new encoder_data(pair.first, pair.second, i, offsets[i]), i);
             }
+
             return EOS;
         }
     };
@@ -182,18 +181,7 @@ namespace huffman::encoder::detail
 
         void svc_end() override {
             for(size_t i = 0; i < workers; i++) {
-                auto& data = in_data[i]->data;
-                auto& offset = in_data[i]->offset;
-
-                if (!data.empty()) {
-                    if (offset == 0) {
-                        out_data.insert(out_data.end(), data.begin(), data.end());
-                    } else {
-                        out_data.back() |= data[0];
-                        out_data.insert(out_data.end(), data.begin() + 1, data.end());
-                    }
-                }   
-
+                detail::append_text_parallel(out_data, in_data[i]->data, in_data[i]->offset);
                 delete in_data[i];
             }
         }

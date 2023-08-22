@@ -28,6 +28,37 @@ namespace huffman::encoder::detail
         return threads;
     }
 
+    size_t compute_segment_size(
+        std::string const& text,
+        size_t workers
+    ) {
+        return positive_div_ceil(text.length(), workers);
+    }
+
+    std::pair<std::string::const_iterator, std::string::const_iterator> extract_task_range(
+        std::string const& text,
+        size_t segment_size,
+        size_t workers,
+        size_t worker_num
+    ) {
+        auto begin = text.cbegin() + segment_size * worker_num;
+        auto end = (worker_num == workers - 1) ? text.cend() : begin + segment_size;
+
+        return { begin, end };
+    }
+
+    void combine_frequencies(
+        std::unordered_map<char, int>& total_frequencies,
+        std::unordered_map<char, int> const& partial_frequencies
+    ) {
+        for(auto const& pair : partial_frequencies) {
+            if (total_frequencies.find(pair.first) != total_frequencies.end())
+                total_frequencies[pair.first] += pair.second;
+            else
+                total_frequencies.emplace(pair.first, pair.second);
+        }
+    }
+
     void extract_frequencies_parallel(
         std::vector<threadTask>& threads,
         std::unordered_map<char, int>& total_frequencies,
@@ -45,25 +76,48 @@ namespace huffman::encoder::detail
         std::vector<threadResultFrequencies> work_threads(workers);
 
         //submit tasks (map)
-        auto segment_size = positive_div_ceil(text.length(), workers);
+        auto segment_size = compute_segment_size(text, workers);
         auto fun = std::function(&extract_frequencies);
         for(size_t i = 0; i < workers; i++) {
-            auto begin = text.cbegin() + segment_size * i;
-            auto end = (i == workers - 1) ? text.cend() : begin + segment_size;
-            work_threads[i] = submitTask(std::move(threads[i]), fun, begin, end);
+            auto pair = extract_task_range(text, segment_size, workers, i);
+            work_threads[i] = submitTask(std::move(threads[i]), fun, pair.first, pair.second);
         }
 
         //compute total frequencies (reduce)
         frequencies.resize(workers);
         for(size_t i = 0; i < workers; i++) {
             threads[i] = getResult(std::move(work_threads[i]), frequencies[i]);
+            combine_frequencies(total_frequencies, frequencies[i]);
+        }
+    }
 
-            for(auto pair : frequencies[i]) {
-                if (total_frequencies.find(pair.first) != total_frequencies.end())
-                    total_frequencies[pair.first] += pair.second;
-                else
-                    total_frequencies.emplace(pair.first, pair.second);
-            }
+    void append_text_parallel(
+        std::vector<byte>& out_data,
+        std::vector<byte>& data_to_append,
+        byte offset
+    ) {
+        if (data_to_append.empty()) return;
+
+        if (offset == 0) {
+            out_data.insert(out_data.end(), data_to_append.begin(), data_to_append.end());
+        } else {
+            out_data.back() |= data_to_append[0];
+            out_data.insert(out_data.end(), data_to_append.begin() + 1, data_to_append.end());
+        }
+    }
+
+    void compute_serialization_offsets(
+        encoderTable const& table,
+        std::vector<std::unordered_map<char, int>> const& frequencies,
+        std::vector<byte>& offsets,
+        size_t workers
+    ) {
+        offsets.resize(workers);
+        offsets[0] = 0;
+        for(size_t i = 1; i < workers; i++) {
+            auto previous_bits = count_bits(table, frequencies[i - 1]);
+            auto previous_offset = offsets[i - 1];
+            offsets[i] = ((previous_bits + previous_offset) % 8);
         }
     }
 
@@ -94,36 +148,21 @@ namespace huffman::encoder::detail
         });
 
         //compute serialization offsets
-        std::vector<byte> offsets(workers);
-        
-        offsets[0] = 0;
-        for(size_t i = 1; i < workers; i++) {
-            auto previous_bits = count_bits(table, frequencies[i - 1]);
-            auto previous_offset = offsets[i - 1];
-            offsets[i] = ((previous_bits + previous_offset) % 8);
-        }
+        std::vector<byte> offsets;
+        compute_serialization_offsets(table, frequencies, offsets, workers);
 
         //submit tasks (map)
-        auto segment_size = positive_div_ceil(text.length(), workers);
+        auto segment_size = compute_segment_size(text, workers);
         for(size_t i = 0; i < workers; i++) {
-            auto begin = text.cbegin() + segment_size * i;
-            auto end = (i == workers - 1) ? text.cend() : begin + segment_size;
-            work_threads[i] = submitTask(std::move(threads[i]), fun, begin, end, offsets[i]);
+            auto pair = extract_task_range(text, segment_size, workers, i);
+            work_threads[i] = submitTask(std::move(threads[i]), fun, pair.first, pair.second, offsets[i]);
         }
 
         //append serialized text (reduce)
         for(size_t i = 0; i < workers; i++) {
             std::vector<byte> data;
             threads[i] = getResult(std::move(work_threads[i]), data);
-
-            if (data.empty()) continue;
-
-            if (offsets[i] == 0) {
-                out_data.insert(out_data.end(), data.begin(), data.end());
-            } else {
-                out_data.back() |= data[0];
-                out_data.insert(out_data.end(), data.begin() + 1, data.end());
-            }
+            detail::append_text_parallel(out_data, data, offsets[i]);
         }
     }
 }
