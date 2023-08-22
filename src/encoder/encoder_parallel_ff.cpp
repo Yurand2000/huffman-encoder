@@ -1,17 +1,23 @@
 #include "encoder.h"
 
-#include <ff/ff.hpp>
-
 #include "encoder_table.h"
 #include "character_serializer.h"
 #include "../utils.h"
 
-#include "../threads/threadTask.h"
+#include <ff/ff.hpp>
 
 using namespace ff;
 
 namespace huffman::encoder::detail
 {
+    std::unordered_map<char, int> extract_frequencies(std::string::const_iterator, std::string::const_iterator);
+
+    size_t count_bits(const encoderTable&, std::unordered_map<char, int>);
+
+    void append_text_metadata(std::string const&, std::vector<byte>&);
+
+    std::vector<byte> encode_text(const encoderTable&, std::string::const_iterator, std::string::const_iterator, byte);
+
     //frequencies extraction farm
     struct frequency_data {
         std::string::const_iterator text_start;
@@ -45,9 +51,7 @@ namespace huffman::encoder::detail
         }
     };
 
-    std::unordered_map<char, int> extract_frequencies(std::string::const_iterator, std::string::const_iterator);
-    
-    frequency_output* extract_frequencies_ff(frequency_data* data, ff_node*) {
+    frequency_output* extract_frequencies_ff_worker(frequency_data* data, ff_node*) {
         auto result = new frequency_output(
             extract_frequencies(data->text_start, data->text_end),
             data->worker
@@ -86,6 +90,22 @@ namespace huffman::encoder::detail
         }
     };
 
+    void extract_frequencies_ff(
+        std::unordered_map<char, int>& total_frequencies,
+        std::vector<std::unordered_map<char, int>>& frequencies,
+        std::string const& text,
+        size_t workers
+    ) {
+        frequencies.resize(workers);
+        auto fun = std::function(&detail::extract_frequencies_ff_worker);
+        auto farm = ff_Farm<detail::frequency_data, detail::frequency_output>(fun, workers);
+        auto emitter = detail::frequencyExtractionEmitter(text, workers);
+        auto collector = detail::frequencyExtractionCollector(workers, total_frequencies, frequencies);
+        farm.add_emitter(emitter);
+        farm.add_collector(collector);
+        farm.run_and_wait_end();
+    }
+
     //encoding farm
     struct encoder_data {
         std::string::const_iterator text_start;
@@ -99,8 +119,6 @@ namespace huffman::encoder::detail
         size_t worker;
         byte offset;
     };
-    
-    size_t count_bits(const encoderTable&, std::unordered_map<char, int>);
     
     struct encodingEmitter: ff_monode_t<void*, encoder_data>
     {
@@ -135,9 +153,7 @@ namespace huffman::encoder::detail
         }
     };
 
-    std::vector<byte> encode_text(const encoderTable&, std::string::const_iterator, std::string::const_iterator, byte);
-
-    encoder_output* encode_text_ff(const encoderTable& table, encoder_data* data, ff_node*) {
+    encoder_output* encode_text_ff_worker(const encoderTable& table, encoder_data* data, ff_node*) {
         auto result = new encoder_output(
             encode_text(table, data->text_start, data->text_end, data->offset),
             data->worker,
@@ -182,20 +198,35 @@ namespace huffman::encoder::detail
             }
         }
     };
+
+    void encode_text_ff(
+        encoderTable const& table,
+        std::vector<std::unordered_map<char, int>>& frequencies,
+        std::vector<byte>& out_data,
+        std::string const& text,
+        size_t workers
+    ) {
+        std::vector<byte> offsets(workers);
+        auto fun = std::function([table](detail::encoder_data* data, ff_node* n) {
+            return detail::encode_text_ff_worker(table, data, n);
+        });
+        
+        auto farm = ff_Farm<detail::encoder_data, detail::encoder_output>(fun, workers);
+        auto emitter = detail::encodingEmitter(text, table, offsets, frequencies, workers);
+        auto collector = detail::encodingCollector(workers, out_data);
+        farm.add_emitter(emitter);
+        farm.add_collector(collector);
+        farm.run_and_wait_end();
+    }
 }
 
 namespace huffman::encoder
 {
     std::vector<byte> encode_parallel_ff(std::string text, size_t workers) {
-        std::unordered_map<char, int> total_frequencies {};
-        std::vector<std::unordered_map<char, int>> frequencies(workers);
-        auto fun = std::function(&detail::extract_frequencies_ff);
-        auto farm = ff_Farm<detail::frequency_data, detail::frequency_output>(fun, workers);
-        auto emitter = detail::frequencyExtractionEmitter(text, workers);
-        auto collector = detail::frequencyExtractionCollector(workers, total_frequencies, frequencies);
-        farm.add_emitter(emitter);
-        farm.add_collector(collector);
-        farm.run_and_wait_end();
+        //extract frequencies of letters (parallelized)
+        std::unordered_map<char, int> total_frequencies;
+        std::vector<std::unordered_map<char, int>> frequencies;
+        detail::extract_frequencies_ff(total_frequencies, frequencies, text, workers);
 
         auto table = encoderTable(total_frequencies);
 
@@ -203,23 +234,10 @@ namespace huffman::encoder
         auto out_data = table.serialize();
 
         //insert the number of characters
-        auto number_of_characters = text.size();
-        auto size_bytes = reinterpret_cast<byte*>(&number_of_characters);
-        for(size_t i = 0; i < sizeof(size_t); i++) {
-            out_data.push_back(size_bytes[i]);
-        }
+        detail::append_text_metadata(text, out_data);
 
-        //encode text
-        auto fun2 = std::function([table](detail::encoder_data* data, ff_node* n) {
-            return detail::encode_text_ff(table, data, n);
-        });
-        std::vector<byte> offsets(workers);
-        auto farm2 = ff_Farm<detail::encoder_data, detail::encoder_output>(fun2, workers);
-        auto emitter2 = detail::encodingEmitter(text, table, offsets, frequencies, workers);
-        auto collector2 = detail::encodingCollector(workers, out_data);
-        farm2.add_emitter(emitter2);
-        farm2.add_collector(collector2);
-        farm2.run_and_wait_end();
+        //encode text (parallelized)
+        detail::encode_text_ff(table, frequencies, out_data, text, workers);
 
         return out_data;
     }
