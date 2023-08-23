@@ -1,21 +1,20 @@
 #include "file_utils.h"
 
-std::string read_text_file(const std::string& filename)
-{
-    constexpr auto read_size = std::size_t(4096*4096);
-    auto file = std::ifstream(filename);
-    file.exceptions(std::ios_base::badbit);
+#include <string>
+#include <filesystem>
 
+std::string read_text_file(const std::string& filename)
+{    
+    auto file = std::ifstream(filename, std::ios::in | std::ios::binary);
+    
     if (!file.is_open()) {
         throw std::runtime_error("File \"" + filename + "\" does not exist.");
     }
 
-    auto out = std::string();
-    auto buf = std::string(read_size, '\0');
-    while (file.read(&buf[0], read_size)) {
-        out.append(buf, 0, file.gcount());
-    }
-    out.append(buf, 0, file.gcount());
+    auto file_size = std::filesystem::file_size(filename);
+    std::string out(file_size, '\0');
+    file.read(out.data(), file_size);
+
     return out;
 }
 
