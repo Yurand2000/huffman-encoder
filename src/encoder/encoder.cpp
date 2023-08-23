@@ -4,6 +4,10 @@
 #include "character_serializer.h"
 #include "../utils.h"
 
+#ifdef CHRONO_ENABLED
+#include "../timing.h"
+#endif
+
 namespace huffman::encoder::detail
 {
     using namespace huffman::encoder;
@@ -61,11 +65,25 @@ namespace huffman::encoder::detail
 namespace huffman::encoder
 {
     std::vector<byte> encode(std::string text) {
+#ifdef CHRONO_ENABLED
+        auto& timing = TimingLogger::instance();
+        auto& frequencies_timer = timing.newTimer("02.00 - Extracting letter frequencies from the text.");
+#endif
         //extract frequencies of letters
         auto frequencies = detail::extract_frequencies(text.cbegin(), text.cend());
+
+#ifdef CHRONO_ENABLED
+        frequencies_timer.stopTimer();
+        auto& encodingTable_timer = timing.newTimer("02.01 - Building encoding table.");
+#endif
         
         //build the encoding table
         auto table = encoderTable(frequencies);
+
+#ifdef CHRONO_ENABLED
+        encodingTable_timer.stopTimer();
+        auto& serialization_timer = timing.newTimer("02.02 - Serialization of text.");
+#endif
 
         //serialize the table in the output array
         auto out_data = table.serialize();
@@ -76,6 +94,10 @@ namespace huffman::encoder
         //encode text
         auto serialized = detail::encode_text(table, text.begin(), text.end(), 0);
         out_data.insert(out_data.end(), serialized.begin(), serialized.end());
+
+#ifdef CHRONO_ENABLED
+        serialization_timer.stopTimer();
+#endif
 
         return out_data;
     } 

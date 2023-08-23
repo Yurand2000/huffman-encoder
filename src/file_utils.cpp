@@ -2,7 +2,7 @@
 
 std::string read_text_file(const std::string& filename)
 {
-    constexpr auto read_size = std::size_t(4096);
+    constexpr auto read_size = std::size_t(4096*4096);
     auto file = std::ifstream(filename);
     file.exceptions(std::ios_base::badbit);
 

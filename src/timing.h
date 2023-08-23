@@ -32,7 +32,7 @@ public:
     ~Timer();
 
     void stopTimer();
-    std::chrono::milliseconds getElapsedTime() const;    
+    std::chrono::nanoseconds getElapsedTime() const;    
 };
 
 #endif

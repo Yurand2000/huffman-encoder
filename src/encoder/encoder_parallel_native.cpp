@@ -6,6 +6,10 @@
 
 #include "../threads/threadTask.h"
 
+#ifdef CHRONO_ENABLED
+#include "../timing.h"
+#endif
+
 namespace huffman::encoder::detail
 {
     using namespace huffman::encoder;
@@ -170,17 +174,37 @@ namespace huffman::encoder::detail
 namespace huffman::encoder
 {
     std::vector<byte> encode_parallel_native(std::string text, size_t workers) {
+#ifdef CHRONO_ENABLED
+        auto& timing = TimingLogger::instance();
+        auto& thread_spawn_timer = timing.newTimer("02.** - Thread spawning.");
+#endif
 
         //spawn necessary threads
         auto threads = detail::spawnThreads(workers);
+
+#ifdef CHRONO_ENABLED
+        thread_spawn_timer.stopTimer();
+        auto& frequencies_timer = timing.newTimer("02.00 - Extracting letter frequencies from the text (parallel).");
+#endif
 
         //extract frequencies of letters (parallelized)
         std::unordered_map<char, int> total_frequencies;
         std::vector<std::unordered_map<char, int>> frequencies;
         detail::extract_frequencies_parallel(threads, total_frequencies, frequencies, text, workers);
 
+#ifdef CHRONO_ENABLED
+        frequencies_timer.stopTimer();
+        auto& encodingTable_timer = timing.newTimer("02.01 - Building encoding table.");
+#endif
+
         //build the encoding table
         auto table = encoderTable(total_frequencies);
+
+#ifdef CHRONO_ENABLED
+        encodingTable_timer.stopTimer();
+        auto& serialization_timer = timing.newTimer("02.02 - Serialization of text.");
+        auto& serialize_metadata_timer = timing.newTimer("02.02a - Serialization of metadata.");
+#endif
 
         //serialize the table in the output array
         auto out_data = table.serialize();
@@ -188,8 +212,18 @@ namespace huffman::encoder
         //insert the number of characters
         detail::append_text_metadata(text, out_data);
 
+#ifdef CHRONO_ENABLED
+        serialize_metadata_timer.stopTimer();
+        auto& serialize_text_timer = timing.newTimer("02.02b - Serialization of actual text (parallel).");
+#endif
+
         //encode text (parallelized)
         detail::encode_text_parallel(threads, frequencies, out_data, table, text, workers);
+
+#ifdef CHRONO_ENABLED
+        serialize_text_timer.stopTimer();
+        serialization_timer.stopTimer();
+#endif
 
         return out_data;
     }

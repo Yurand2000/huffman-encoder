@@ -1,6 +1,7 @@
 #include "timing.h"
 
 #include <iostream>
+#include <iomanip>
 
 Timer::Timer() {
     start_time = std::chrono::steady_clock::now();
@@ -16,14 +17,15 @@ void Timer::stopTimer() {
     }
 }
 
-std::chrono::milliseconds Timer::getElapsedTime() const {
+std::chrono::nanoseconds Timer::getElapsedTime() const {
     if (end_time != std::chrono::time_point<std::chrono::steady_clock>()) {
-        return std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        return end_time - start_time;
     } else {
-        return std::chrono::milliseconds(0);
+        auto now = std::chrono::steady_clock::now();
+        return now - start_time;
     }
 }
-    
+
 TimingLogger& TimingLogger::instance() {
     static TimingLogger logger;
     return logger;
@@ -35,7 +37,13 @@ Timer& TimingLogger::newTimer(std::string timerName) {
 }
 
 void TimingLogger::logTimers() {
+    std::cout << std::setw(12) << std::right << "Time (ms)" << " | " << std::left << "Timer/Sequence Name" << std::endl;
     for(auto& pair : timings) {
-        std::cout << pair.first << " - " << pair.second.getElapsedTime().count() << "ms" << std::endl;
+        auto timer_name = pair.first;
+        auto elapsed_time = pair.second.getElapsedTime();
+        auto elapsed_time_ms = elapsed_time.count() / 1000000.0;
+        std::cout << std::setw(12) << std::right << std::fixed << 
+            std::setprecision(3) << elapsed_time_ms << " | " <<
+            std::left << timer_name << std::endl;
     }
 }

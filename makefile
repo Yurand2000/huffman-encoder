@@ -20,6 +20,9 @@ TEST_DEPENDS := $(patsubst %.o,%.d,$(TEST_OBJECTS))
 #build main program
 all: $(BUILD)/program
 
+all-chrono: override COMPILE=$(COMPILER) $(OPTIONS) -DCHRONO_ENABLED
+all-chrono: $(BUILD)/program
+
 $(BUILD)/program : $(SRC)/main.cpp $(OBJECTS)
 	@mkdir $(dir $@) -p
 	$(COMPILE) -o $@ $^
@@ -52,4 +55,4 @@ clean:
 
 clear: clean
 
-.PHONY: all test clean clear
+.PHONY: all all-chrono test clean clear
