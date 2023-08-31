@@ -12,6 +12,7 @@ private:
     std::map<std::string, Timer> timings;
 
 public:
+    //singleton pattern
     static TimingLogger& instance();
 
     Timer& newTimer(std::string timerName);
@@ -20,6 +21,10 @@ public:
 
 private:
     TimingLogger() = default;
+    TimingLogger(const TimingLogger&) = delete;
+    TimingLogger(TimingLogger&&) = delete;
+    TimingLogger& operator=(const TimingLogger&) = delete;
+    TimingLogger& operator=(TimingLogger&&) = delete;
 };
 
 class Timer {
@@ -32,7 +37,7 @@ public:
     ~Timer();
 
     void stopTimer();
-    std::chrono::nanoseconds getElapsedTime() const;    
+    std::chrono::nanoseconds getElapsedTime() const;
 };
 
 #endif

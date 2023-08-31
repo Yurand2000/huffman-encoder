@@ -16,8 +16,6 @@ namespace huffman::encoder::detail
 {
     std::unordered_map<char, int> extract_frequencies(std::string::const_iterator, std::string::const_iterator);
 
-    size_t count_bits(const encoderTable&, std::unordered_map<char, int>);
-
     void append_text_metadata(std::string const&, std::vector<byte>&);
 
     std::vector<byte> encode_text(const encoderTable&, std::string::const_iterator, std::string::const_iterator, byte);
@@ -58,8 +56,8 @@ namespace huffman::encoder::detail
         frequency_data* svc(void**) override {
             auto segment_size = compute_segment_size(text, workers);
             for(size_t i = 0; i < workers; i++) {
-                auto pair = extract_task_range(text, segment_size, workers, i);
-                ff_send_out_to(new frequency_data(pair.first, pair.second, i), i);
+                auto [begin, end] = extract_task_range(text, segment_size, workers, i);
+                ff_send_out_to(new frequency_data(begin, end, i), i);
             }
             return EOS;
         }
@@ -148,8 +146,8 @@ namespace huffman::encoder::detail
 
             auto segment_size = compute_segment_size(text, workers);
             for(size_t i = 0; i < workers; i++) {
-                auto pair = extract_task_range(text, segment_size, workers, i);
-                ff_send_out_to(new encoder_data(pair.first, pair.second, i, offsets[i]), i);
+                auto [begin, end] = extract_task_range(text, segment_size, workers, i);
+                ff_send_out_to(new encoder_data(begin, end, i, offsets[i]), i);
             }
 
             return EOS;

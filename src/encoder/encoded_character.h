@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <bitset>
 
 #include "../definitions.h"
 #include "../utils.h"
@@ -11,9 +10,11 @@
 namespace huffman::encoder
 {
     struct encodedCharacter {
+    public:
         byte bits;
         byte code[TABLE_SIZE_BYTES];
 
+    public:
         encodedCharacter();
         encodedCharacter(std::vector<byte>::const_iterator& serialized);
         encodedCharacter(std::vector<byte>::const_iterator&& serialized);
@@ -26,7 +27,11 @@ namespace huffman::encoder
         }
 
         inline byte last_byte_bits() const {
-            return ((bits - 1) % 8) + 1;
+            if (bits == 0) {
+                return 0;
+            } else {
+                return ((bits - 1) % 8) + 1;
+            }
         }
 
         std::string to_string() const;

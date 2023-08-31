@@ -15,6 +15,7 @@ namespace huffman::parallel::native
     template<class R, class ...ArgTypes> inline threadResult<R, ArgTypes...> submitTask(threadTask&&, std::function<R(ArgTypes...)>, ArgTypes...);
     template<class R, class ...ArgTypes> inline threadTask getResult(threadResult<R, ArgTypes...>&&, R&);
     
+    //a threadTask object owns a thread which is waiting for a new task.
     class threadTask {
     private:
         std::thread thread;
@@ -42,6 +43,7 @@ namespace huffman::parallel::native
         }
     };
 
+    //a threadResult object owns a thread which is executing a task.
     template<class R, class ...ArgTypes>
     class threadResult {
     private:

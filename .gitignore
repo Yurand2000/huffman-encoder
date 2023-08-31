@@ -1,4 +1,6 @@
-﻿sync.sh
-.vscode
+﻿.vscode
 build
 include/ff/config.hpp
+sync_generic.sh
+sync_numa.sh
+sync_spm.sh

@@ -38,9 +38,8 @@ Timer& TimingLogger::newTimer(std::string timerName) {
 
 void TimingLogger::logTimers() {
     std::cout << std::setw(12) << std::right << "Time (ms)" << " | " << std::left << "Timer/Sequence Name" << std::endl;
-    for(auto& pair : timings) {
-        auto timer_name = pair.first;
-        auto elapsed_time = pair.second.getElapsedTime();
+    for(auto const& [timer_name, timer] : timings) {
+        auto elapsed_time = timer.getElapsedTime();
         auto elapsed_time_ms = elapsed_time.count() / 1000000.0;
         std::cout << std::setw(12) << std::right << std::fixed << 
             std::setprecision(3) << elapsed_time_ms << " | " <<

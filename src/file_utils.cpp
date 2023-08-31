@@ -27,16 +27,13 @@ std::vector<unsigned char> read_binary_file(const std::string& filename)
         throw std::runtime_error("File \"" + filename + "\" does not exist.");
     }
 
-    file.seekg(0, std::ios::end);
-    std::ifstream::pos_type size = file.tellg();
-
-    if (size == 0) {
+    auto file_size = std::filesystem::file_size(filename);
+    if (file_size == 0) {
         return std::vector<unsigned char>{};
     }
 
-    std::vector<unsigned char> result(size);
-    file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(result.data()), size);
+    std::vector<unsigned char> result(file_size);
+    file.read(reinterpret_cast<char*>(result.data()), file_size);
 
     return result;
 }

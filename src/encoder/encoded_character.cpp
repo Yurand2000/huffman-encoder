@@ -12,9 +12,6 @@ namespace huffman::encoder
     encodedCharacter::encodedCharacter(std::vector<byte>::const_iterator& serialized)
         : encodedCharacter()
     {
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wstringop-overflow"
-
         bits = *serialized;
 
         auto curr_byte = *(++serialized);
@@ -25,8 +22,6 @@ namespace huffman::encoder
 
         code[ bytes() - 1 ] = curr_byte & leftByteMasks[last_byte_bits()];
         curr_byte = *(++serialized);
-
-        #pragma GCC diagnostic pop
     }
     
     encodedCharacter::encodedCharacter(std::vector<byte>::const_iterator&& serialized)

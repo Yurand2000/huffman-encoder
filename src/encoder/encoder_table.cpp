@@ -90,8 +90,7 @@ namespace huffman::encoder
         }
     }
 
-    encoderTable::encoderTable(const std::unordered_map<char, int>& frequencies)
-    {
+    encoderTable::encoderTable(const std::unordered_map<char, int>& frequencies) {
         auto tree = detail::build_encoder_tree(frequencies);
         detail::build_encoder_table(*this, tree);
     }

@@ -17,8 +17,6 @@ namespace huffman::encoder::detail
 
     std::unordered_map<char, int> extract_frequencies(std::string::const_iterator, std::string::const_iterator);
 
-    size_t count_bits(const encoderTable&, std::unordered_map<char, int>);
-
     void append_text_metadata(std::string const&, std::vector<byte>&);
 
     std::vector<byte> encode_text(const encoderTable&, std::string::const_iterator, std::string::const_iterator, byte);
@@ -83,8 +81,8 @@ namespace huffman::encoder::detail
         auto segment_size = compute_segment_size(text, workers);
         auto fun = std::function(&extract_frequencies);
         for(size_t i = 0; i < workers; i++) {
-            auto pair = extract_task_range(text, segment_size, workers, i);
-            work_threads[i] = submitTask(std::move(threads[i]), fun, pair.first, pair.second);
+            auto [begin, end] = extract_task_range(text, segment_size, workers, i);
+            work_threads[i] = submitTask(std::move(threads[i]), fun, begin, end);
         }
 
         //compute total frequencies (reduce)
@@ -108,6 +106,14 @@ namespace huffman::encoder::detail
             out_data.back() |= data_to_append[0];
             out_data.insert(out_data.end(), data_to_append.begin() + 1, data_to_append.end());
         }
+    }
+
+    inline size_t count_bits(const encoderTable& table, std::unordered_map<char, int> frequencies) {
+        size_t bits = 0;
+        for(auto const [character, frequency] : frequencies)
+            bits += table.get(character).bits * frequency;
+
+        return bits;
     }
 
     void compute_serialization_offsets(
@@ -158,8 +164,8 @@ namespace huffman::encoder::detail
         //submit tasks (map)
         auto segment_size = compute_segment_size(text, workers);
         for(size_t i = 0; i < workers; i++) {
-            auto pair = extract_task_range(text, segment_size, workers, i);
-            work_threads[i] = submitTask(std::move(threads[i]), fun, pair.first, pair.second, offsets[i]);
+            auto [begin, end] = extract_task_range(text, segment_size, workers, i);
+            work_threads[i] = submitTask(std::move(threads[i]), fun, begin, end, offsets[i]);
         }
 
         //append serialized text (reduce)

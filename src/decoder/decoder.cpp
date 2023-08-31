@@ -1,8 +1,7 @@
 #include "decoder.h"
 
-#include <iostream>
-
 #include "decoder_tree.h"
+#include "../bit_stream.h"
 #include "../utils.h"
 
 namespace huffman::decoder

@@ -67,11 +67,9 @@ int main(int argc, char** argv)
         auto& write_timer = timing.newTimer("03 - Writing Output");
 #endif
 
-        {
-            auto file = std::ofstream(options.output_file);
-            file.write(reinterpret_cast<char*>(encoded_text.data()), encoded_text.size());
-            file.flush();
-        }
+        auto file = std::ofstream(options.output_file);
+        file.write(reinterpret_cast<char*>(encoded_text.data()), encoded_text.size());
+        file.flush();
 
 #ifdef CHRONO_ENABLED
         write_timer.stopTimer();

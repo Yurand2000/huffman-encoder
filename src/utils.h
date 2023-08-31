@@ -4,6 +4,8 @@
 #include <iostream>
 
 template<typename T>
+//computes the ceiling function of a division where both therms are positive
+//without using floating point arithmetic.
 inline T positive_div_ceil(T dividend, T divisor) {
     if (dividend == 0) {
         return 0;
@@ -12,6 +14,7 @@ inline T positive_div_ceil(T dividend, T divisor) {
     }
 }
 
+//pre-generated masks to extract a certain number of bits from a byte.
 const static byte rightByteMasks[] = {
     0,
     0b00000001,

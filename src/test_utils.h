@@ -8,6 +8,7 @@
 #include <iostream>
 #include <exception>
 
+//unit test utilities
 template<typename... Args>
 void assert(bool expression, Args&&... args) {
     if (!expression) {
@@ -36,6 +37,7 @@ int main()
     }
 
     std::cout << TEST_FILE_NAME << " - Pass" << std::endl;
+    return 0;
 }
 
 #endif

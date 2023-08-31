@@ -8,9 +8,11 @@
 namespace huffman::encoder
 {
     struct serializableCharacter {
+    public:
         char character;
         encodedCharacter encoding;
 
+    public:
         serializableCharacter(char character, encodedCharacter encoding);
         serializableCharacter(std::vector<byte>::const_iterator& bytes);
         serializableCharacter(std::vector<byte>::const_iterator&& bytes);

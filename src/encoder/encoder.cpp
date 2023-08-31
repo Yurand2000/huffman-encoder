@@ -27,14 +27,6 @@ namespace huffman::encoder::detail
         return frequencies;
     }
 
-    size_t count_bits(const encoderTable& table, std::unordered_map<char, int> frequencies) {
-        size_t bits = 0;
-        for(auto pair : frequencies)
-            bits += table.get(pair.first).bits * pair.second;
-
-        return bits;
-    }
-
     void append_text_metadata(
         std::string const& text,
         std::vector<byte>& out_data

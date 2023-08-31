@@ -9,7 +9,7 @@ namespace huffman::parallel::native::detail
 
             if (!function) return;
 
-            //promises must be used only once, so a new object is create for the next iteration
+            //promises must be used only once, so a new object is created for the next iteration
             *promise = std::promise<std::function<void()>>();
             future = promise->get_future();
 
